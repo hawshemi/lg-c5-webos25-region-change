@@ -161,7 +161,7 @@ After the region is changed successfully, the TV will reboot automatically. Wait
 
 After the TV turns on, open **Settings > Network > Wi-Fi Connection** and check that 5 GHz networks are visible.
 
-### 10. Roll back if needed
+## Roll back if needed
 
 > [!CAUTION]
 > Rollback has not been tested on the confirmed configuration. The command below follows the upstream method, but success is not confirmed for this TV.
