@@ -1,4 +1,4 @@
-# LG C5 / webOS 25 Region Change for 5 GHz Wi-Fi
+# LG C5 / webOS 25 Region Change for 5 GHz WiFi
 
 > [!IMPORTANT]
 > This is a **region configuration change**, not a firmware update or firmware fix. It will not repair a Wi-Fi hardware or router problem.
