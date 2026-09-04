@@ -59,6 +59,8 @@ Developer Mode has a limited session time. Extend it in the app if needed.
 
 In the Developer Mode app, turn **Key Server** on. Note the case-sensitive six-character passphrase shown by the app.
 
+Note the TV's IP address shown in the Developer Mode app.
+
 In PowerShell, set the TV address and create a temporary working folder:
 
 ```powershell
@@ -67,13 +69,6 @@ $WorkDir = Join-Path $env:TEMP "lg-c5-region-change"
 New-Item -ItemType Directory -Path $WorkDir -Force | Out-Null
 Set-Location $WorkDir
 ```
-
-Find the TV's IPv4 address using either method:
-
-1. Open your modem or router settings and check the connected devices or DHCP client list.
-2. On Android, install [WiFiman from Google Play](https://play.google.com/store/apps/details?id=com.ubnt.usurvey), scan the local network, and find the LG TV.
-
-Make sure the TV and the device used to find it are connected to the same local network.
 
 Replace `<TV_IP>` before continuing.
 
