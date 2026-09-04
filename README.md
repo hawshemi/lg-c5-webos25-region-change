@@ -35,7 +35,6 @@ The TV remained stable with Germany selected as its country. This result applies
 - TV and Windows 11 PC on the same local network
 - LG Developer account
 - PowerShell with `curl.exe`, `ssh.exe`, and `scp.exe`
-- A target area option verified for your exact TV and intended region
 
 This repository intentionally contains only this README. Download `change_region.sh` from its upstream project when instructed; do not add a copy to this repository.
 
@@ -142,48 +141,25 @@ For the confirmed TV above, the original value was `4956`. Do not assume that va
 
 ### 7. Write the target area option
 
-Choose an area option from the [upstream area-code table](https://github.com/lennylxx/lg-geolock-bypass#known-area-codes) only after confirming that its region and hardware setting group suit your TV.
-
-`3122` is a **known EU example** (`hwSettingGroup=EU`) and worked on the confirmed configuration above. It is not a universal value and may be wrong for another TV.
+This guide uses area option `3122`. It is a **known EU value** (`hwSettingGroup=EU`) and worked on the confirmed configuration above. It is not universal and may be wrong for another TV.
 
 The upstream project states that non-US config and settings mappings are best-effort. Review its current notes before proceeding.
 
-Set and validate your chosen value, then write it:
+Write `3122`:
 
 ```powershell
-$TargetArea = "<TARGET_AREA_OPTION>"
-if ($TargetArea -notmatch '^\d+$') { throw "Replace <TARGET_AREA_OPTION> with a verified numeric value." }
-
-ssh.exe -T -i .\webos_rsa -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -p 9922 "prisoner@$TV" "sh /tmp/change_region.sh $TargetArea"
+ssh.exe -T -i .\webos_rsa -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -p 9922 "prisoner@$TV" "sh /tmp/change_region.sh 3122"
 ```
 
 Check the output for a successful NVRAM write and verification. Stop if it reports a failure.
 
-### 8. Reboot
+### 8. Wait for the automatic reboot
 
-The write command does not reboot the TV. Reboot it explicitly:
+After the region is changed successfully, the TV will reboot automatically. Wait for it to turn on with the new region. Do not disconnect its power during the reboot.
 
-```powershell
-ssh.exe -T -i .\webos_rsa -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -p 9922 "prisoner@$TV" "sh /tmp/change_region.sh reboot"
-```
+### 9. Verify 5 GHz Wi-Fi
 
-The SSH connection will close during reboot.
-
-### 9. Verify the region and 5 GHz Wi-Fi
-
-After the TV starts:
-
-1. Open **Settings > General > System > Location** and select the correct available country if needed.
-2. Open **Settings > Network > Wi-Fi Connection**.
-3. Confirm that the intended 5 GHz network is visible and connects successfully. Channel 36 was confirmed on the tested TV.
-
-To verify the stored region value, turn Key Server on again, repeat the `scp.exe` command from step 5, then run:
-
-```powershell
-ssh.exe -T -i .\webos_rsa -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -p 9922 "prisoner@$TV" "sh /tmp/change_region.sh verify"
-```
-
-If 5 GHz is still missing, the cause may be the access point's channel, channel width, security mode, signal, or TV hardware rather than the region.
+After the TV turns on, open **Settings > Network > Wi-Fi Connection** and check that 5 GHz networks are visible.
 
 ### 10. Roll back if needed
 
@@ -197,10 +173,9 @@ $OriginalArea = "<ORIGINAL_AREA_OPTION>"
 if ($OriginalArea -notmatch '^\d+$') { throw "Replace <ORIGINAL_AREA_OPTION> with the saved numeric value." }
 
 ssh.exe -T -i .\webos_rsa -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -p 9922 "prisoner@$TV" "sh /tmp/change_region.sh $OriginalArea"
-ssh.exe -T -i .\webos_rsa -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -p 9922 "prisoner@$TV" "sh /tmp/change_region.sh reboot"
 ```
 
-After reboot, restore the appropriate country in the TV settings and verify the original region.
+The TV should reboot automatically after the original value is written. After reboot, restore the appropriate country in the TV settings and verify the original region.
 
 ## Troubleshooting
 
@@ -230,7 +205,7 @@ This is expected because `/tmp` is temporary. Repeat the `scp.exe` command from 
 
 ### EZ-Adjust value reverts
 
-Some webOS builds enforce the region through `factorymanager`, so an EZ-Adjust change can revert. Do not keep changing it in EZ-Adjust. Use the direct NVRAM method above, check the command output, reboot, then copy the script again and run `verify`.
+Some webOS builds enforce the region through `factorymanager`, so an EZ-Adjust change can revert. Do not keep changing it in EZ-Adjust. Use the direct NVRAM method above and check the command output for a successful write.
 
 ## References
 
