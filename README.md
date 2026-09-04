@@ -5,6 +5,8 @@
 
 Use this guide when 5 GHz Wi-Fi is unavailable because of the TV's factory region configuration.
 
+Seriously, LG? The hardware supports 5 GHz, but the Middle East region config disables it anyway. Change the region and it magically works. This is a stupid, artificial limitation that should not exist on a premium TV.
+
 > [!WARNING]
 > Changing the region can affect tuner behavior, the LG Content Store, installed or available apps, country settings, and warranty or service handling. A wrong area option may leave the TV with unsuitable regional settings.
 >
