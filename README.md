@@ -31,7 +31,7 @@ The TV remained stable with Germany selected as its country. This result applies
 
 ### Requirements
 
-- LG C5-class TV running webOS 25
+- LG C5 TV running webOS 25
 - TV and Windows 11 PC on the same local network
 - LG Developer account
 - PowerShell with `curl.exe`, `ssh.exe`, and `scp.exe`
@@ -67,6 +67,13 @@ $WorkDir = Join-Path $env:TEMP "lg-c5-region-change"
 New-Item -ItemType Directory -Path $WorkDir -Force | Out-Null
 Set-Location $WorkDir
 ```
+
+Find the TV's IPv4 address using either method:
+
+1. Open your modem or router settings and check the connected devices or DHCP client list.
+2. On Android, install [WiFiman from Google Play](https://play.google.com/store/apps/details?id=com.ubnt.usurvey), scan the local network, and find the LG TV.
+
+Make sure the TV and the device used to find it are connected to the same local network.
 
 Replace `<TV_IP>` before continuing.
 
