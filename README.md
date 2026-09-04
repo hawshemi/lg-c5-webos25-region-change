@@ -78,7 +78,7 @@ Test-NetConnection $TV -Port 9991
 Test-NetConnection $TV -Port 9922
 ```
 
-Both should report `TcpTestSucceeded : True`.
+Both should report `TcpTestSucceeded : True`. if not, turn on and off the tv , and in Developer app in TV turn off and on (or on and off) the Key store option. then try again.
 
 ### 3. Download `webos_rsa`
 
