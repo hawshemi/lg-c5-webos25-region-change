@@ -161,7 +161,7 @@ After the region is changed successfully, the TV will reboot automatically. Wait
 
 After the TV turns on, open **Settings > Network > Wi-Fi Connection** and check that 5 GHz networks are visible.
 
-#### Roll back (if needed)
+## Roll back (if needed)
 
 > [!CAUTION]
 > Rollback has not been tested on the confirmed configuration. The command below follows the upstream method, but success is not confirmed for this TV.
@@ -169,36 +169,6 @@ After the TV turns on, open **Settings > Network > Wi-Fi Connection** and check 
 Turn Key Server on and copy `change_region.sh` again if the TV has rebooted. Then restore the exact value saved in step 6.
 
 The TV should reboot automatically after the original value is written. After reboot, restore the appropriate country in the TV settings and verify the original region.
-
-## Troubleshooting
-
-### Port 9991 is unavailable
-
-Open the Developer Mode app, confirm Dev Mode Status is on, toggle **Key Server** off and on, and retry the download immediately. Confirm that `$TV` is correct and both devices are on the same network.
-
-### Port 9922 is unavailable
-
-Confirm Developer Mode and Key Server are on. Use port `9922`, not port `22`. Check `$TV`, local firewall or VPN rules, and router client isolation.
-
-### Private key permissions are too open
-
-Run the `icacls.exe` commands in step 4. The key should be readable by your Windows account, not by broad groups or other users.
-
-### `Permission denied`
-
-Use user `prisoner`, port `9922`, the downloaded `webos_rsa` file, and the current case-sensitive six-character passphrase. If needed, toggle Key Server and download `webos_rsa` again.
-
-### `PTY allocation request failed`
-
-The Developer Mode account may not provide an interactive terminal. Use `ssh.exe -T` with the remote command at the end, exactly as shown above.
-
-### `/tmp/change_region.sh` disappeared after reboot
-
-This is expected because `/tmp` is temporary. Repeat the `scp.exe` command from step 5 after each reboot.
-
-### EZ-Adjust value reverts
-
-Some webOS builds enforce the region through `factorymanager`, so an EZ-Adjust change can revert. Do not keep changing it in EZ-Adjust. Use the direct NVRAM method above and check the command output for a successful write.
 
 ## References
 
