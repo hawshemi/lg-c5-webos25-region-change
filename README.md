@@ -1,290 +1,236 @@
-# LG C5 / webOS 25: Enable 5 GHz Wi-Fi by Changing the TV Region
+# LG C5 / webOS 25 Region Change for 5 GHz Wi-Fi
 
-This guide is for LG C5-class TVs where **5 GHz Wi-Fi is unavailable because of the factory region configuration**.
+> [!IMPORTANT]
+> This is a **region configuration change**, not a firmware update or firmware fix. It will not repair a Wi-Fi hardware or router problem.
 
-It uses LG Developer Mode and the open-source `lg-geolock-bypass` script to change the area option directly in NVRAM. **Root/Homebrew is not required.**
+Use this guide when 5 GHz Wi-Fi is unavailable because of the TV's factory region configuration.
 
 > [!WARNING]
-> Changing the TV region can affect tuner standards, LG Content Store availability, apps, language/country choices, and other region-specific features.
+> Changing the region can affect tuner behavior, the LG Content Store, installed or available apps, country settings, and warranty or service handling. A wrong area option may leave the TV with unsuitable regional settings.
 >
-> **Always read and save the original area option before changing anything.**
->
-> Do not use random area codes. The `3122` example below is the known **EU hardware-group** area option and is not automatically correct for every LG model or regional variant.
+> Read and save the original area option before writing anything. Continue at your own risk.
 
-## Requirements
+This procedure is for **Windows 11 and PowerShell**. It uses LG Developer Mode and the upstream [`lg-geolock-bypass`](https://github.com/lennylxx/lg-geolock-bypass) script. Root access is not required.
+
+## Confirmed result
+
+| Item | Confirmed value |
+| --- | --- |
+| TV | `LG OLED55C56LA.AMQQLJD` |
+| Software | webOS 25 / `10.3.0-1902` |
+| Firmware | `33.31.68` |
+| Original configuration | Middle East, area option `4956` |
+| Target configuration | EU, area option `3122`, country set to Germany |
+| Result | 5 GHz Wi-Fi restored; channel 36 tested; all available 5 GHz channels worked |
+| Other functions | No problems observed with the tuner, apps, or country settings |
+| Rollback | Not tested |
+
+The TV remained stable with Germany selected as its country. This result applies only to the configuration above. Other models, firmware versions, and hardware groups may behave differently.
+
+## Before you start
+
+### Requirements
 
 - LG C5-class TV running webOS 25
-- TV and Windows PC on the same local network
-- [LG Developer Mode app](https://webostv.developer.lge.com/develop/getting-started/developer-mode-app)
-- Windows 11 with PowerShell, `curl`, `ssh`, and `scp`
-- [`lg-geolock-bypass`](https://github.com/lennylxx/lg-geolock-bypass)
-  - Required file: `change_region.sh`
+- TV and Windows 11 PC on the same local network
+- LG Developer account
+- PowerShell with `curl.exe`, `ssh.exe`, and `scp.exe`
+- A target area option verified for your exact TV and intended region
 
-The upstream project was tested by its author on an **LG OLED C5, webOS 10.3.0 / firmware 33.30.97**.
+This repository intentionally contains only this README. Download `change_region.sh` from its upstream project when instructed; do not add a copy to this repository.
 
-## 1. Download the script
+## Procedure
 
-Download or clone:
+Developer Mode → Key Server → SSH key → key permissions → script upload → save original value → write target value → reboot → verify → roll back if needed
 
-https://github.com/lennylxx/lg-geolock-bypass
+### 1. Enable LG Developer Mode
 
-Extract it, then open **PowerShell in that folder**.
+Follow the official [LG Developer Mode documentation](https://webostv.developer.lge.com/develop/getting-started/developer-mode-app):
 
-You should see at least:
+1. Install and open **Developer Mode** on the TV.
+2. Sign in with your LG Developer account.
+3. Turn **Dev Mode Status** on.
+4. Let the TV reboot.
+5. Open the Developer Mode app again.
 
-```text
-change_region.sh
-calc_area.py
-README.md
-```
+Developer Mode has a limited session time. Extend it in the app if needed.
 
-## 2. Enable Developer Mode on the TV
+### 2. Enable Key Server
 
-On the TV:
+In the Developer Mode app, turn **Key Server** on. Note the case-sensitive six-character passphrase shown by the app.
 
-1. Install and open **Developer Mode**.
-2. Sign in.
-3. Turn **Dev Mode Status** ON.
-4. Allow the TV to reboot if requested.
-5. Open Developer Mode again.
-6. Turn **Key Server** ON.
-7. Note:
-   - TV IP address
-   - 6-character passphrase
-
-Keep the Developer Mode app open while getting the key.
-
-In the commands below, replace:
-
-```text
-<TV_IP>
-```
-
-with the TV's IP address.
-
-Optional connection check:
+In PowerShell, set the TV address and create a temporary working folder:
 
 ```powershell
-Test-NetConnection <TV_IP> -Port 9991
-Test-NetConnection <TV_IP> -Port 9922
+$TV = "<TV_IP>"
+$WorkDir = Join-Path $env:TEMP "lg-c5-region-change"
+New-Item -ItemType Directory -Path $WorkDir -Force | Out-Null
+Set-Location $WorkDir
 ```
 
-Both should show:
+Replace `<TV_IP>` before continuing.
+
+Optional port checks:
+
+```powershell
+Test-NetConnection $TV -Port 9991
+Test-NetConnection $TV -Port 9922
+```
+
+Both should report `TcpTestSucceeded : True`.
+
+### 3. Download `webos_rsa`
+
+While Key Server is on, download the TV's SSH private key:
+
+```powershell
+curl.exe -f "http://${TV}:9991/webos_rsa" -o .\webos_rsa
+Get-Item .\webos_rsa
+```
+
+### 4. Fix SSH key permissions if needed
+
+Try the next step first. If OpenSSH reports that the private key permissions are too open, run:
+
+```powershell
+$CurrentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+icacls.exe .\webos_rsa /inheritance:r
+icacls.exe .\webos_rsa /grant:r "${CurrentUser}:(R)"
+```
+
+If `icacls.exe .\webos_rsa` still lists another user or group with access, remove that exact entry:
+
+```powershell
+icacls.exe .\webos_rsa /remove "DOMAIN\UserOrGroup"
+```
+
+### 5. Copy `change_region.sh`
+
+Download the current script directly from the upstream project into the temporary folder:
+
+```powershell
+curl.exe -fL "https://raw.githubusercontent.com/lennylxx/lg-geolock-bypass/main/change_region.sh" -o .\change_region.sh
+```
+
+Copy it to the TV:
+
+```powershell
+scp.exe -i .\webos_rsa -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -P 9922 .\change_region.sh "prisoner@${TV}:/tmp/change_region.sh"
+```
+
+Enter the six-character Developer Mode passphrase when prompted. On the first connection, confirm the TV's SSH host-key prompt only if the address is correct.
+
+### 6. Read and save the original area option
+
+Do this before changing the region:
+
+```powershell
+ssh.exe -T -i .\webos_rsa -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -p 9922 "prisoner@$TV" "sh /tmp/change_region.sh read" | Tee-Object -FilePath .\original-area-option.txt
+```
+
+The first line contains the value to preserve:
 
 ```text
-TcpTestSucceeded : True
+Current area option: <ORIGINAL_AREA_OPTION>
 ```
 
-## 3. Download the TV SSH key
+Save `<ORIGINAL_AREA_OPTION>` somewhere safe. Do not guess it later.
 
-Run:
+For the confirmed TV above, the original value was `4956`. Do not assume that value is correct for another TV.
+
+### 7. Write the target area option
+
+Choose an area option from the [upstream area-code table](https://github.com/lennylxx/lg-geolock-bypass#known-area-codes) only after confirming that its region and hardware setting group suit your TV.
+
+`3122` is a **known EU example** (`hwSettingGroup=EU`) and worked on the confirmed configuration above. It is not a universal value and may be wrong for another TV.
+
+The upstream project states that non-US config and settings mappings are best-effort. Review its current notes before proceeding.
+
+Set and validate your chosen value, then write it:
 
 ```powershell
-curl.exe http://<TV_IP>:9991/webos_rsa -o .\lg_private.key
+$TargetArea = "<TARGET_AREA_OPTION>"
+if ($TargetArea -notmatch '^\d+$') { throw "Replace <TARGET_AREA_OPTION> with a verified numeric value." }
+
+ssh.exe -T -i .\webos_rsa -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -p 9922 "prisoner@$TV" "sh /tmp/change_region.sh $TargetArea"
 ```
 
-Confirm the key exists:
+Check the output for a successful NVRAM write and verification. Stop if it reports a failure.
+
+### 8. Reboot
+
+The write command does not reboot the TV. Reboot it explicitly:
 
 ```powershell
-Get-Item .\lg_private.key
+ssh.exe -T -i .\webos_rsa -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -p 9922 "prisoner@$TV" "sh /tmp/change_region.sh reboot"
 ```
 
-If port `9991` suddenly stops responding, turn **Key Server OFF and ON again** on the TV and retry the `curl` command immediately.
+The SSH connection will close during reboot.
 
-## 4. Fix private-key permissions if Windows rejects it
+### 9. Verify the region and 5 GHz Wi-Fi
 
-If `ssh` or `scp` reports:
+After the TV starts:
 
-```text
-WARNING: UNPROTECTED PRIVATE KEY FILE!
-Permissions ... are too open.
-```
+1. Open **Settings > General > System > Location** and select the correct available country if needed.
+2. Open **Settings > Network > Wi-Fi Connection**.
+3. Confirm that the intended 5 GHz network is visible and connects successfully. Channel 36 was confirmed on the tested TV.
 
-run:
+To verify the stored region value, turn Key Server on again, repeat the `scp.exe` command from step 5, then run:
 
 ```powershell
-$me = "$env:USERDOMAIN\$env:USERNAME"
-icacls .\lg_private.key /inheritance:r
-icacls .\lg_private.key /grant:r "$($me):(R)"
+ssh.exe -T -i .\webos_rsa -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -p 9922 "prisoner@$TV" "sh /tmp/change_region.sh verify"
 ```
 
-If the error names another Windows user/group that still has access, remove that exact entry:
+If 5 GHz is still missing, the cause may be the access point's channel, channel width, security mode, signal, or TV hardware rather than the region.
+
+### 10. Roll back if needed
+
+> [!CAUTION]
+> Rollback has not been tested on the confirmed configuration. The command below follows the upstream method, but success is not confirmed for this TV.
+
+Turn Key Server on and copy `change_region.sh` again if the TV has rebooted. Then restore the exact value saved in step 6:
 
 ```powershell
-icacls .\lg_private.key /remove "DOMAIN\UserOrGroup"
+$OriginalArea = "<ORIGINAL_AREA_OPTION>"
+if ($OriginalArea -notmatch '^\d+$') { throw "Replace <ORIGINAL_AREA_OPTION> with the saved numeric value." }
+
+ssh.exe -T -i .\webos_rsa -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -p 9922 "prisoner@$TV" "sh /tmp/change_region.sh $OriginalArea"
+ssh.exe -T -i .\webos_rsa -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -p 9922 "prisoner@$TV" "sh /tmp/change_region.sh reboot"
 ```
 
-## 5. Copy the script to the TV
-
-Run:
-
-```powershell
-scp -i .\lg_private.key `
-  -o HostKeyAlgorithms=+ssh-rsa `
-  -o PubkeyAcceptedAlgorithms=+ssh-rsa `
-  -P 9922 `
-  .\change_region.sh prisoner@<TV_IP>:/tmp/
-```
-
-When asked for a passphrase, enter the **6-character passphrase shown in the TV Developer Mode app**.
-
-## 6. Read and save the original area option
-
-Do this **before writing anything**:
-
-```powershell
-ssh -T -i .\lg_private.key `
-  -o HostKeyAlgorithms=+ssh-rsa `
-  -o PubkeyAcceptedAlgorithms=+ssh-rsa `
-  -p 9922 `
-  prisoner@<TV_IP> "sh /tmp/change_region.sh read"
-```
-
-Example output:
-
-```text
-Current area option: 4956
-  continentIdx:     92
-  languageCountry:  6
-  hwSettingGroup:   1
-```
-
-Your values may be different.
-
-**Save the complete output.** You need the original area option if you ever want to restore the TV.
-
-## 7. Change the region
-
-For the EU hardware group, the known area option is:
-
-```text
-3122
-```
-
-It decodes as:
-
-```text
-continentIdx:    50
-languageCountry: EU
-hwSettingGroup:  EU
-```
-
-To write it:
-
-```powershell
-ssh -T -i .\lg_private.key `
-  -o HostKeyAlgorithms=+ssh-rsa `
-  -o PubkeyAcceptedAlgorithms=+ssh-rsa `
-  -p 9922 `
-  prisoner@<TV_IP> "sh /tmp/change_region.sh 3122"
-```
-
-A successful result should contain something similar to:
-
-```text
-[+] NVRAM contiArea2All set to 3122
-[+] Verify: ... "contiArea2All":"3122" ...
-[+] Decoded: ... lang=EU hw=EU ...
-```
-
-The TV may reboot automatically after the change.
-
-## 8. After reboot
-
-Go to:
-
-```text
-Settings → General → System → Location
-```
-
-If needed, select the appropriate country in the new region.
-
-Then open:
-
-```text
-Settings → Network → Wi-Fi Connection
-```
-
-5 GHz networks should now be visible if the original problem was the regional Wi-Fi restriction.
-
-Connect normally and confirm the TV shows the connection as **5G / 5 GHz**.
-
-## Optional: verify the new area option
-
-If Developer Mode is still active, copy `change_region.sh` again if the TV has rebooted because `/tmp` is cleared on reboot.
-
-Then run:
-
-```powershell
-ssh -T -i .\lg_private.key `
-  -o HostKeyAlgorithms=+ssh-rsa `
-  -o PubkeyAcceptedAlgorithms=+ssh-rsa `
-  -p 9922 `
-  prisoner@<TV_IP> "sh /tmp/change_region.sh read"
-```
-
-It should report the new area option.
-
-You can also verify it in the LG service menu if you already have legitimate service-menu access.
-
-## Roll back to the original region
-
-Use the **exact original area option saved in step 6**.
-
-Example:
-
-```powershell
-ssh -T -i .\lg_private.key `
-  -o HostKeyAlgorithms=+ssh-rsa `
-  -o PubkeyAcceptedAlgorithms=+ssh-rsa `
-  -p 9922 `
-  prisoner@<TV_IP> "sh /tmp/change_region.sh <ORIGINAL_AREA_OPTION>"
-```
-
-Do not guess the original value.
+After reboot, restore the appropriate country in the TV settings and verify the original region.
 
 ## Troubleshooting
 
-### `curl: (7) Failed to connect ... port 9991`
+### Port 9991 is unavailable
 
-On the TV:
+Open the Developer Mode app, confirm Dev Mode Status is on, toggle **Key Server** off and on, and retry the download immediately. Confirm that `$TV` is correct and both devices are on the same network.
 
-1. Open Developer Mode.
-2. Confirm **Dev Mode Status** is ON.
-3. Turn **Key Server OFF**, then ON.
-4. Retry the `curl` command immediately.
+### Port 9922 is unavailable
 
-### `Permission denied (publickey,keyboard-interactive)`
+Confirm Developer Mode and Key Server are on. Use port `9922`, not port `22`. Check `$TV`, local firewall or VPN rules, and router client isolation.
 
-Usually one of these:
+### Private key permissions are too open
 
-- `lg_private.key` was not downloaded
-- the key permissions are too open
-- the wrong key is being used
-- Key Server / Developer Mode was restarted and the key needs to be downloaded again
+Run the `icacls.exe` commands in step 4. The key should be readable by your Windows account, not by broad groups or other users.
 
-### `PTY allocation request failed on channel 0`
+### `Permission denied`
 
-Do not open an interactive shell.
+Use user `prisoner`, port `9922`, the downloaded `webos_rsa` file, and the current case-sensitive six-character passphrase. If needed, toggle Key Server and download `webos_rsa` again.
 
-Use `ssh -T` with the command at the end, as shown in this guide.
+### `PTY allocation request failed`
 
-### The area option changes in EZ-Adjust but reverts when leaving
+The Developer Mode account may not provide an interactive terminal. Use `ssh.exe -T` with the remote command at the end, exactly as shown above.
 
-Some newer webOS builds enforce a region lock through `factorymanager`.
+### `/tmp/change_region.sh` disappeared after reboot
 
-That is the reason this method writes the value directly through the low-level storage service instead of relying on EZ-Adjust.
+This is expected because `/tmp` is temporary. Repeat the `scp.exe` command from step 5 after each reboot.
 
-### Script disappeared after reboot
+### EZ-Adjust value reverts
 
-Normal. `/tmp` is temporary.
-
-Copy `change_region.sh` to the TV again before running it.
+Some webOS builds enforce the region through `factorymanager`, so an EZ-Adjust change can revert. Do not keep changing it in EZ-Adjust. Use the direct NVRAM method above, check the command output, reboot, then copy the script again and run `verify`.
 
 ## References
 
-- LG Developer Mode documentation:  
-  https://webostv.developer.lge.com/develop/getting-started/developer-mode-app
-
-- `lg-geolock-bypass` project and area-code table:  
-  https://github.com/lennylxx/lg-geolock-bypass
+- [LG: App Testing with Developer Mode App](https://webostv.developer.lge.com/develop/getting-started/developer-mode-app)
+- [`lennylxx/lg-geolock-bypass`](https://github.com/lennylxx/lg-geolock-bypass)
