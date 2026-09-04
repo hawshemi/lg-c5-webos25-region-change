@@ -161,19 +161,12 @@ After the region is changed successfully, the TV will reboot automatically. Wait
 
 After the TV turns on, open **Settings > Network > Wi-Fi Connection** and check that 5 GHz networks are visible.
 
-## Roll back if needed
+#### Roll back (if needed)
 
 > [!CAUTION]
 > Rollback has not been tested on the confirmed configuration. The command below follows the upstream method, but success is not confirmed for this TV.
 
-Turn Key Server on and copy `change_region.sh` again if the TV has rebooted. Then restore the exact value saved in step 6:
-
-```powershell
-$OriginalArea = "<ORIGINAL_AREA_OPTION>"
-if ($OriginalArea -notmatch '^\d+$') { throw "Replace <ORIGINAL_AREA_OPTION> with the saved numeric value." }
-
-ssh.exe -T -i .\webos_rsa -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa -p 9922 "prisoner@$TV" "sh /tmp/change_region.sh $OriginalArea"
-```
+Turn Key Server on and copy `change_region.sh` again if the TV has rebooted. Then restore the exact value saved in step 6.
 
 The TV should reboot automatically after the original value is written. After reboot, restore the appropriate country in the TV settings and verify the original region.
 
